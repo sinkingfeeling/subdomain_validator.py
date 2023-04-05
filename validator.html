@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Domain Name Validator</title>
+  <script>
+    function checkDomains() {
+      const inputElement = document.getElementById('inputBox');
+      const outputElement = document.getElementById('outputBox');
+      const domains = inputElement.value.split('\n');
+      const validDomains = [];
+      const apiUrl = 'https://cloudflare-dns.com/dns-query';
+      const dnsParams = {
+        type: 'A',
+        cd: true,
+      };
+      for (let domain of domains) {
+        domain = domain.trim();
+        fetch(`${apiUrl}?name=${domain}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/dns-json',
+          },
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.Status === 0 && data.Answer && data.Answer.length > 0 && data.Answer[0].type === 1) {
+            validDomains.push(domain);
+          }
+        })
+        .catch(error => {
+          console.error(`Error checking domain ${domain}: ${error}`);
+        });
+      }
+      Promise.allSettled(domains.map(domain => {
+        return fetch(`${apiUrl}?name=${domain}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/dns-json',
+          },
+        })
+        .then(response => response.json())
+      }))
+      .then(results => {
+        outputElement.value = validDomains.join('\n');
+      });
+    }
+  </script>
+</head>
+<body>
+  <h1>Domain Name Validator</h1>
+  <form>
+    <label for="inputBox">Enter domain names, one per line:</label><br>
+    <textarea id="inputBox" name="inputBox" rows="10" cols="50"></textarea><br>
+    <input type="button" value="Validate Domains" onclick="checkDomains()">
+  </form>
+  <h2>Valid Domains:</h2>
+  <textarea id="outputBox" rows="10" cols="50"></textarea>
+</body>
+</html>
